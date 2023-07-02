@@ -15,7 +15,7 @@ body.dark {
   --clr-background: #050604;
   --clr-primary-button: #efca6b;
   --clr-secondary-button: #0d0d0d;
-  --clr-accent: #f2d282;
+  --clr-accent: #1f6e92;
 
   background: var(--clr-background);
   color: var(--clr-text);
@@ -27,7 +27,7 @@ body.light {
   --clr-background: #f8f1f2;
   --clr-primary-button: #efca6b;
   --clr-secondary-button: #f2e3e6;
-  --clr-accent: #f2d282;
+  --clr-accent: #1f6e92;
   --clr-button-text: #150a0c;
 
   background: var(--clr-background);
@@ -131,8 +131,7 @@ a {
   font-weight: 400;
   line-height: var(--line-height);
   margin-bottom: 1rem;
-  color: var(--clr-primary-button);
-  text-decoration: none;
+  color: var(--clr-accent);
 }
 
 a:hover {
