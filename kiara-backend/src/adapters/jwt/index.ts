@@ -1,4 +1,4 @@
-import { UserRepository, User } from "../../ports/User.interface";
+import { IUserRepository, IUser } from "../../ports/User.interface";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
@@ -6,13 +6,13 @@ import bcrypt from "bcrypt";
 dotenv.config();
 
 type LoginResponse = {
-  authToken: string;
-  refreshToken: string;
+  authToken: string & { _brand: "authToken" };
+  refreshToken: string & { _brand: "refreshToken" };
 };
 export class JWTAdapter {
-  private UserRepository: UserRepository;
+  private UserRepository: IUserRepository;
 
-  constructor(UserRepository: UserRepository) {
+  constructor(UserRepository: IUserRepository) {
     this.UserRepository = UserRepository;
   }
 
@@ -27,12 +27,12 @@ export class JWTAdapter {
     }
     const authToken = jwt.sign(user, process.env.AUTH_TOKEN_SECRET as string, {
       expiresIn: "15m",
-    });
+    }) as string & { _brand: "authToken" };
     const refreshToken = jwt.sign(
       user,
       process.env.REFRESH_TOKEN_SECRET as string,
       { expiresIn: "7d" }
-    );
+    ) as string & { _brand: "refreshToken" };
     return { authToken, refreshToken };
   }
   async refresh(refreshToken: string): Promise<LoginResponse> {
@@ -40,7 +40,7 @@ export class JWTAdapter {
     const user = jwt.verify(
       refreshToken,
       process.env.REFRESH_TOKEN_SECRET as string
-    ) as User;
+    ) as IUser;
     // if the token is valid, generate a new auth token and refresh token
     if (!user) {
       throw new Error("Invalid refresh token");
@@ -49,19 +49,19 @@ export class JWTAdapter {
     delete (user as any).exp;
     const authToken = jwt.sign(user, process.env.AUTH_TOKEN_SECRET as string, {
       expiresIn: "15m",
-    });
+    }) as string & { _brand: "authToken" };
     const newRefreshToken = jwt.sign(
       user,
       process.env.REFRESH_TOKEN_SECRET as string,
       { expiresIn: "7d" }
-    );
+    ) as string & { _brand: "refreshToken" };
     return { authToken, refreshToken: newRefreshToken };
   }
-  async verify(authToken: string): Promise<User> {
+  verify(authToken: string): IUser {
     const user = jwt.verify(
       authToken,
       process.env.AUTH_TOKEN_SECRET as string
-    ) as User;
+    ) as IUser;
     if (!user) {
       throw new Error("Invalid auth token");
     }

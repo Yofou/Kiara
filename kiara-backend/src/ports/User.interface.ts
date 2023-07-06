@@ -1,19 +1,29 @@
-export interface User {
-  id: string;
-  name: string;
-  avatar: string;
-  email: string;
-  passwordHash: string;
-  createdAt: Date;
-  updatedAt: Date;
+type UserId = string & { _brand: "UserId" };
+type UserName = string & { _brand: "UserName" };
+type UserAvatar = string & { _brand: "UserAvatar" };
+type UserEmail = string & { _brand: "UserEmail" };
+type UserPasswordHash = string & { _brand: "UserPasswordHash" };
+type UserCreatedAt = string & { _brand: "UserCreatedAt" };
+type UserUpdatedAt = string & { _brand: "UserUpdatedAt" };
+type UserIsVerfied = boolean & { _brand: "UserIsVerfied" };
+
+export interface IUser {
+  id: UserId;
+  name: UserName;
+  avatar: UserAvatar;
+  email: UserEmail;
+  passwordHash: UserPasswordHash;
+  createdAt: UserCreatedAt;
+  updatedAt: UserUpdatedAt;
+  isVerified: UserIsVerfied;
 }
 
-export interface UserRepository {
-  create(user: Partial<User>): Promise<User>;
-  update(id: string, user: Partial<User>): Promise<User>;
+export interface IUserRepository {
+  create(user: Partial<IUser>): Promise<IUser>;
+  update(id: string, user: Partial<IUser>): Promise<IUser>;
   delete(id: string): Promise<void>;
-  findById(id: string): Promise<User | null>;
-  findByEmail(email: string): Promise<User | null>;
-  findByName(name: string): Promise<User | null>;
-  findAll(): Promise<User[]>;
+  findById(id: string): Promise<IUser | null>;
+  findByEmail(email: string): Promise<IUser | null>;
+  findByName(name: string): Promise<IUser | null>;
+  findAll(): Promise<IUser[]>;
 }

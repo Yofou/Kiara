@@ -1,8 +1,11 @@
 import express from "express";
 import dotenv from "dotenv";
 import bcrypt from "bcrypt";
+import { IUser } from "./ports/User.interface";
 import { UserRepository } from "./adapters/sqlite";
 import { JWTAdapter } from "./adapters/jwt";
+import { z } from "zod";
+
 dotenv.config();
 
 const app = express();
@@ -22,49 +25,92 @@ const isAuthorized = async (
     return res.status(401).json({ error: "Unauthorized" });
   }
   try {
-    await auth.verify(authToken);
+    auth.verify(authToken);
     next();
   } catch (error) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 };
 
-app.get("/", (req, res) => {
-  res.send("Hello World!");
-});
-
 app.post("/signup", async (req, res) => {
-  const { name, email, password } = req.body;
-  const passwordHash = await bcrypt.hash(password, 10);
-  const user = await UserRepository.create({
-    name,
-    email,
-    passwordHash,
+  const UserSchema = z.object({
+    email: z.string().email(),
+    password: z.string().min(8),
+    name: z.string().min(3).max(20),
+    avatar: z.string().url(),
   });
-  const { authToken, refreshToken } = await auth.signIn(email, password);
-  res.json({ user, authToken, refreshToken });
+
+  try {
+    const user = UserSchema.parse(req.body);
+    const hashedPassword = await bcrypt.hash(user.password, 10);
+    const newUser = (await UserRepository.create({
+      email: user.email as string & { _brand: "UserEmail" },
+      name: user.name as string & { _brand: "UserName" },
+      avatar: user.avatar as string & { _brand: "UserAvatar" },
+      passwordHash: hashedPassword as string & { _brand: "UserPasswordHash" },
+    })) satisfies IUser;
+    const { authToken, refreshToken } = await auth.signIn(
+      newUser.email,
+      user.password
+    );
+    return res.json({ authToken, refreshToken });
+  } catch (error: any) {
+    return res.status(400).json(error);
+  }
 });
 
 app.post("/signin", async (req, res) => {
-  const { email, password } = req.body;
-  const { authToken, refreshToken } = await auth.signIn(email, password);
-  res.json({ authToken, refreshToken });
+  const UserSchema = z.object({
+    email: z.string().email(),
+    password: z.string().min(8),
+  });
+
+  try {
+    const user = UserSchema.parse(req.body);
+    const { authToken, refreshToken } = await auth.signIn(
+      user.email,
+      user.password
+    );
+    return res.json({ authToken, refreshToken });
+  } catch (error) {
+    return res.status(400).json(error);
+  }
 });
 
 app.post("/refresh", async (req, res) => {
-  const { refreshToken } = req.body;
-  const { authToken, refreshToken: newRefreshToken } = await auth.refresh(
-    refreshToken
-  );
-  res.json({ authToken, refreshToken: newRefreshToken });
+  console.log(req.body);
+  const RefreshSchema = z.object({
+    refreshToken: z.string(),
+  });
+
+  try {
+    const { refreshToken } = RefreshSchema.parse(req.body);
+    const { authToken, refreshToken: newRefreshToken } = await auth.refresh(
+      refreshToken
+    );
+    return res.json({ authToken, refreshToken: newRefreshToken });
+  } catch (error) {
+    //console.log(error);
+    return res.status(400).json(error);
+  }
 });
 
 app.get("/me", isAuthorized, async (req, res) => {
+  // get bearer token from header
   const authToken = req.headers.authorization?.split(" ")[1];
-  const user = await auth.verify(authToken as string);
-  res.json({ user });
+  if (!authToken) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const user = auth.verify(authToken);
+    delete (user as any).passwordHash;
+    return res.json(user);
+  } catch (error: any) {
+    return res.status(400).json(error);
+  }
 });
 
 app.listen(port, () => {
-  console.log(`Example app listening at http://localhost:${port}`);
+  console.log(`Kiara Back-end listening at http://localhost:${port}`);
 });

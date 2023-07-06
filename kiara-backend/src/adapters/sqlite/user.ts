@@ -1,77 +1,117 @@
-import { User, UserRepository } from "../../ports/User.interface";
+import { IUser, IUserRepository } from "../../ports/User.interface";
 import Database from "better-sqlite3";
 import { v4 as uuidv4 } from "uuid";
-export class UserRepo implements UserRepository {
+export class UserRepo implements IUserRepository {
   private db: Database.Database;
   constructor(db: Database.Database) {
     this.db = db;
 
-    // Create table if not exists
-    this.db
-      .prepare(
-        `CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        avatar TEXT NOT NULL,
-        email TEXT NOT NULL,
-        passwordHash TEXT NOT NULL,
-        createdAt TEXT NOT NULL,
-        updatedAt TEXT NOT NULL
-        )`
-      )
-      .run();
+    this.db.transaction(() => {
+      this.db
+        .prepare(
+          `CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            avatar TEXT NOT NULL,
+            email TEXT NOT NULL,
+            passwordHash TEXT NOT NULL,
+            createdAt TEXT NOT NULL,
+            updatedAt TEXT NOT NULL
+          )`
+        )
+        .run();
+    })();
   }
 
-  async create(user: Partial<User>): Promise<User> {
-    const newUser = this.db
-      .prepare(
-        `INSERT INTO users (id, name, avatar, email, passwordHash, createdAt, updatedAt)
-            VALUES ($id, $name, $avatar, $email, $passwordHash, $createdAt, $updatedAt)`
-      )
-      .run({
-        ...user,
-        id: uuidv4(),
-        avatar: "https://i.pravatar.cc/300",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-    return newUser as unknown as User;
+  async create(
+    user: Pick<IUser, "name" | "email" | "avatar" | "passwordHash">
+  ): Promise<IUser> {
+    const userToCreate = {
+      ...user,
+      id: uuidv4() as IUser["id"],
+      isVerified: false as IUser["isVerified"],
+      createdAt: new Date().toISOString() as IUser["createdAt"],
+      updatedAt: new Date().toISOString() as IUser["updatedAt"],
+    } satisfies IUser;
+    this.db.transaction(() => {
+      this.db
+        .prepare(
+          `INSERT INTO users (id, name, avatar, email, passwordHash, createdAt, updatedAt) VALUES (@id, @name, @avatar, @email,
+            @passwordHash, @createdAt, @updatedAt)`
+        )
+        .run(userToCreate);
+    })();
+
+    return userToCreate;
   }
-  async update(id: string, user: Partial<User>): Promise<User> {
-    const updatedUser = this.db
-      .prepare(
-        `UPDATE users SET name = $name, avatar = $avatar, email = $email, passwordHash = $passwordHash, updatedAt = $updatedAt WHERE id = $id`
-      )
-      .run({
-        ...user,
-        id,
-        updatedAt: new Date().toISOString(),
-      });
-    return updatedUser as unknown as User;
+  async findById(id: string): Promise<IUser> {
+    const user = this.db
+      .prepare(`SELECT * FROM users WHERE id = @id`)
+      .get({ id }) as IUser;
+
+    if (!user) throw new Error("User not found");
+
+    return user as IUser;
+  }
+  async findByEmail(email: string): Promise<IUser> {
+    const user = this.db
+      .prepare(`SELECT * FROM users WHERE email = @email`)
+      .get({ email }) as IUser;
+
+    if (!user) throw new Error("User not found");
+
+    return user as IUser;
+  }
+  async findByName(name: string): Promise<IUser> {
+    const user = this.db
+      .prepare(`SELECT * FROM users WHERE name = @name`)
+      .get({ name }) as IUser;
+
+    if (!user) throw new Error("User not found");
+
+    return user as IUser;
+  }
+  async findAll(): Promise<IUser[]> {
+    const users = this.db.prepare(`SELECT * FROM users`).all() as IUser[];
+
+    return users;
+  }
+  async update(
+    id: string,
+    changes: Omit<Partial<IUser>, "id" | "createdAt" | "updatedAt">
+  ): Promise<IUser> {
+    const user = this.db
+      .prepare(`SELECT * FROM users WHERE id = @id`)
+      .get({ id }) as IUser;
+
+    if (!user) throw new Error("User not found");
+
+    const updatedUser = {
+      ...user,
+      ...changes,
+      updatedAt: new Date().toISOString() as IUser["updatedAt"],
+    } satisfies IUser;
+
+    this.db.transaction(() => {
+      this.db
+        .prepare(
+          `UPDATE users SET name = @name, avatar = @avatar, email = @email,
+            passwordHash = @passwordHash, updatedAt = @updatedAt WHERE id = @id`
+        )
+        .run(updatedUser);
+    })();
+
+    return updatedUser;
   }
   async delete(id: string): Promise<void> {
-    this.db.prepare(`DELETE FROM users WHERE id = $id`).run({ id });
-  }
-  async findById(id: string): Promise<User | null> {
-    const foundUser = this.db
-      .prepare(`SELECT * FROM users WHERE id = $id`)
-      .get({ id });
-    return foundUser as unknown as User;
-  }
-  async findByEmail(email: string): Promise<User | null> {
-    const foundUser = this.db
-      .prepare(`SELECT * FROM users WHERE email = $email`)
-      .get({ email });
-    return foundUser as unknown as User;
-  }
-  async findByName(name: string): Promise<User | null> {
-    const foundUser = this.db
-      .prepare(`SELECT * FROM users WHERE name = $name`)
-      .get({ name });
-    return foundUser as unknown as User;
-  }
-  async findAll(): Promise<User[]> {
-    const foundUsers = this.db.prepare(`SELECT * FROM users`).all();
-    return foundUsers as unknown as User[];
+    const user = this.db
+      .prepare(`SELECT * FROM users WHERE id = @id`)
+      .get({ id }) as IUser;
+
+    if (!user) throw new Error("User not found");
+
+    this.db.transaction(() => {
+      this.db.prepare(`DELETE FROM users WHERE id = @id`).run({ id });
+    })();
   }
 }
