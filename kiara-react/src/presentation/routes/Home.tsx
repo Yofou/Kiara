@@ -1,4 +1,4 @@
-import { Center, Container, FullWidth } from "../components/Layout";
+import { Container, FullWidth } from "../components/Layout";
 import { Github } from "lucide-react";
 import styled from "styled-components";
 
