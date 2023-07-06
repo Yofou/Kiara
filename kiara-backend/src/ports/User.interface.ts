@@ -22,8 +22,8 @@ export interface IUserRepository {
   create(user: Partial<IUser>): Promise<IUser>;
   update(id: string, user: Partial<IUser>): Promise<IUser>;
   delete(id: string): Promise<void>;
-  findById(id: string): Promise<IUser | null>;
-  findByEmail(email: string): Promise<IUser | null>;
-  findByName(name: string): Promise<IUser | null>;
+  findById(id: string): Promise<IUser>;
+  findByEmail(email: string): Promise<IUser>;
+  findByName(name: string): Promise<IUser>;
   findAll(): Promise<IUser[]>;
 }
