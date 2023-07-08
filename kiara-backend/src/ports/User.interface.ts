@@ -19,11 +19,16 @@ export interface IUser {
 }
 
 export interface IUserRepository {
-  create(user: Partial<IUser>): Promise<IUser>;
-  update(id: string, user: Partial<IUser>): Promise<IUser>;
-  delete(id: string): Promise<void>;
-  findById(id: string): Promise<IUser>;
-  findByEmail(email: string): Promise<IUser>;
-  findByName(name: string): Promise<IUser>;
+  create(
+    user: Omit<IUser, "createdAt" | "updatedAt" | "isVerified" | "id">
+  ): Promise<IUser>;
+  update(
+    id: UserId,
+    user: Omit<IUser, "createdAt" | "updatedAt">
+  ): Promise<IUser>;
+  delete(id: UserId): Promise<void>;
+  findById(id: UserId): Promise<IUser>;
+  findByEmail(email: UserEmail): Promise<IUser>;
+  findByName(name: UserName): Promise<IUser>;
   findAll(): Promise<IUser[]>;
 }
