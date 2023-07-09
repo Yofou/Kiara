@@ -29,9 +29,13 @@ export class JWTAdapter {
     if (!isPasswordValid) {
       throw new Error("Invalid password");
     }
-    const authToken = jwt.sign(user, process.env.AUTH_TOKEN_SECRET as string, {
-      expiresIn: "15m",
-    }) as string & { _brand: "authToken" };
+    const authToken = jwt.sign(
+      user,
+      process.env.ACCESS_TOKEN_SECRET as string,
+      {
+        expiresIn: "15m",
+      }
+    ) as string & { _brand: "authToken" };
     const refreshToken = jwt.sign(
       user,
       process.env.REFRESH_TOKEN_SECRET as string,
@@ -51,9 +55,13 @@ export class JWTAdapter {
     }
     delete (user as any).iat;
     delete (user as any).exp;
-    const authToken = jwt.sign(user, process.env.AUTH_TOKEN_SECRET as string, {
-      expiresIn: "15m",
-    }) as string & { _brand: "authToken" };
+    const authToken = jwt.sign(
+      user,
+      process.env.ACCESS_TOKEN_SECRET as string,
+      {
+        expiresIn: "15m",
+      }
+    ) as string & { _brand: "authToken" };
     const newRefreshToken = jwt.sign(
       user,
       process.env.REFRESH_TOKEN_SECRET as string,
@@ -64,7 +72,7 @@ export class JWTAdapter {
   verify(authToken: string): IUser {
     const user = jwt.verify(
       authToken,
-      process.env.AUTH_TOKEN_SECRET as string
+      process.env.ACCESS_TOKEN_SECRET as string
     ) as IUser;
     if (!user) {
       throw new Error("Invalid auth token");
