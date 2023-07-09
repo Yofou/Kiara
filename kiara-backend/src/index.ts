@@ -2,7 +2,11 @@ import express from "express";
 import dotenv from "dotenv";
 import bcrypt from "bcrypt";
 import { IUser } from "./ports/User.interface";
-import { UserRepository } from "./adapters/sqlite";
+import {
+  UserRepository,
+  MessageRepository,
+  ConversationRepository,
+} from "./adapters/sqlite";
 import { JWTAdapter } from "./adapters/jwt";
 import { z } from "zod";
 
@@ -32,7 +36,7 @@ const isAuthorized = async (
   }
 };
 
-app.post("/signup", async (req, res) => {
+app.post("/auth/signup", async (req, res) => {
   const UserSchema = z.object({
     email: z.string().email(),
     password: z.string().min(8),
@@ -59,7 +63,7 @@ app.post("/signup", async (req, res) => {
   }
 });
 
-app.post("/signin", async (req, res) => {
+app.post("/auth/signin", async (req, res) => {
   const UserSchema = z.object({
     email: z.string().email(),
     password: z.string().min(8),
@@ -77,7 +81,7 @@ app.post("/signin", async (req, res) => {
   }
 });
 
-app.post("/refresh", async (req, res) => {
+app.post("/auth/refresh", async (req, res) => {
   console.log(req.body);
   const RefreshSchema = z.object({
     refreshToken: z.string(),
@@ -95,7 +99,7 @@ app.post("/refresh", async (req, res) => {
   }
 });
 
-app.get("/me", isAuthorized, async (req, res) => {
+app.get("/auth/me", isAuthorized, async (req, res) => {
   // get bearer token from header
   const authToken = req.headers.authorization?.split(" ")[1];
   if (!authToken) {
@@ -110,6 +114,241 @@ app.get("/me", isAuthorized, async (req, res) => {
     return res.status(400).json(error);
   }
 });
+
+app.get("/conversations", isAuthorized, async (req, res) => {
+  // get bearer token from header
+  const authToken = req.headers.authorization?.split(" ")[1];
+  if (!authToken) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const user = auth.verify(authToken);
+    const conversations = (await ConversationRepository.findAll()).filter(
+      (conversation) => conversation.ownerId === user.id
+    );
+    return res.json(conversations);
+  } catch (error: any) {
+    return res.status(400).json(error);
+  }
+});
+
+app.get("/conversations/:id", isAuthorized, async (req, res) => {
+  // get bearer token from header
+  const authToken = req.headers.authorization?.split(" ")[1];
+  if (!authToken) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const user = auth.verify(authToken);
+    const conversation = await ConversationRepository.findById(
+      req.params.id as string & { _brand: "ConversationId" }
+    );
+    if (!conversation) {
+      return res.status(404).json({ error: "Conversation not found" });
+    }
+    if (conversation.ownerId !== user.id) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    return res.json(conversation);
+  } catch (error: any) {
+    return res.status(400).json(error);
+  }
+});
+
+app.post("/conversations", isAuthorized, async (req, res) => {
+  // get bearer token from header
+  const authToken = req.headers.authorization?.split(" ")[1];
+  if (!authToken) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const user = auth.verify(authToken);
+    const newConversation = await ConversationRepository.create({
+      ownerId: user.id,
+    });
+    return res.json(newConversation);
+  } catch (error: any) {
+    return res.status(400).json(error);
+  }
+});
+
+app.get("/conversations/:id/messages", isAuthorized, async (req, res) => {
+  // get bearer token from header
+  const authToken = req.headers.authorization?.split(" ")[1];
+  if (!authToken) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const user = auth.verify(authToken);
+    const conversation = await ConversationRepository.findById(
+      req.params.id as string & { _brand: "ConversationId" }
+    );
+    if (!conversation) {
+      return res.status(404).json({ error: "Conversation not found" });
+    }
+    if (conversation.ownerId !== user.id) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const messages = await MessageRepository.findByConversationId(
+      conversation.id
+    );
+    return res.json(messages);
+  } catch (error: any) {
+    return res.status(400).json(error);
+  }
+});
+
+app.delete("/conversations/:id", isAuthorized, async (req, res) => {
+  // get bearer token from header
+  const authToken = req.headers.authorization?.split(" ")[1];
+  if (!authToken) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const user = auth.verify(authToken);
+    const conversation = await ConversationRepository.findById(
+      req.params.id as string & { _brand: "ConversationId" }
+    );
+    if (!conversation) {
+      return res.status(404).json({ error: "Conversation not found" });
+    }
+    if (conversation.ownerId !== user.id) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    await ConversationRepository.delete(conversation.id);
+    return res.json({ success: true });
+  } catch (error: any) {
+    return res.status(400).json(error);
+  }
+});
+
+app.post("/conversations/:id/messages", isAuthorized, async (req, res) => {
+  // get bearer token from header
+  const authToken = req.headers.authorization?.split(" ")[1];
+  if (!authToken) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const MessageSchema = z.object({
+    content: z.string().min(1),
+  });
+
+  try {
+    const user = auth.verify(authToken);
+    const conversation = await ConversationRepository.findById(
+      req.params.id as string & { _brand: "ConversationId" }
+    );
+    if (!conversation) {
+      return res.status(404).json({ error: "Conversation not found" });
+    }
+    if (conversation.ownerId !== user.id) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const message = MessageSchema.parse(req.body);
+    const newMessage = await MessageRepository.create({
+      conversationId: conversation.id,
+      content: message.content as string & { _brand: "MessageContent" },
+      role: "user" as ("user" | "assistant" | "system") & {
+        _brand: "MessageRole";
+      },
+    });
+    return res.json(newMessage);
+  } catch (error: any) {
+    return res.status(400).json(error);
+  }
+});
+
+app.patch(
+  "/conversations/:id/messages/:messageId",
+  isAuthorized,
+  async (req, res) => {
+    // get bearer token from header
+    const authToken = req.headers.authorization?.split(" ")[1];
+    if (!authToken) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const MessageSchema = z.object({
+      content: z.string().min(1),
+    });
+
+    try {
+      const user = auth.verify(authToken);
+      const conversation = await ConversationRepository.findById(
+        req.params.id as string & { _brand: "ConversationId" }
+      );
+      if (!conversation) {
+        return res.status(404).json({ error: "Conversation not found" });
+      }
+      if (conversation.ownerId !== user.id) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const message = await MessageRepository.findById(
+        req.params.messageId as string & { _brand: "MessageId" }
+      );
+      if (!message) {
+        return res.status(404).json({ error: "Message not found" });
+      }
+      const messageUpdate = MessageSchema.parse(req.body);
+      const updatedMessage = await MessageRepository.update(
+        req.params.messageId as string & { _brand: "MessageId" },
+        {
+          content: messageUpdate.content as string & {
+            _brand: "MessageContent";
+          },
+          role: "user" as ("user" | "assistant" | "system") & {
+            _brand: "MessageRole";
+          },
+        }
+      );
+      return res.json(updatedMessage);
+    } catch (error: any) {
+      return res.status(400).json(error);
+    }
+  }
+);
+
+app.delete(
+  "/conversations/:id/messages/:messageId",
+  isAuthorized,
+  async (req, res) => {
+    // get bearer token from header
+    const authToken = req.headers.authorization?.split(" ")[1];
+    if (!authToken) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+      const user = auth.verify(authToken);
+      const conversation = await ConversationRepository.findById(
+        req.params.id as string & { _brand: "ConversationId" }
+      );
+      if (!conversation) {
+        return res.status(404).json({ error: "Conversation not found" });
+      }
+      if (conversation.ownerId !== user.id) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const message = await MessageRepository.findById(
+        req.params.messageId as string & { _brand: "MessageId" }
+      );
+      if (!message) {
+        return res.status(404).json({ error: "Message not found" });
+      }
+      await MessageRepository.delete(
+        req.params.messageId as string & { _brand: "MessageId" }
+      );
+      return res.json({ success: true });
+    } catch (error: any) {
+      return res.status(400).json(error);
+    }
+  }
+);
 
 app.listen(port, () => {
   console.log(`Kiara Back-end listening at http://localhost:${port}`);

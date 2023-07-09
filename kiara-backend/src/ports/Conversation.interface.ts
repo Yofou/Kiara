@@ -1,24 +1,22 @@
-import type { IMessage } from "./Message.interface";
-
 type ConversationId = string & { _brand: "ConversationId" };
+type UserId = string & { _brand: "UserId" };
 type ConversationCreatedAt = string & { _brand: "ConversationCreatedAt" };
 type ConversationUpdatedAt = string & { _brand: "ConversationUpdatedAt" };
 type isArchived = boolean & { _brand: "isArchived" };
-type ConversationMessages = IMessage[] & { _brand: "ConversationMessages" };
 
 export interface IConversation {
   id: ConversationId;
+  ownerId: UserId;
   createdAt: ConversationCreatedAt;
   updatedAt: ConversationUpdatedAt;
   isArchived: isArchived;
-  messages: ConversationMessages;
 }
 
 export interface IConversationRepository {
-  create(conversation: Pick<IConversation, "messages">): Promise<IConversation>;
+  create(conversation: Pick<IConversation, "ownerId">): Promise<IConversation>;
   update(
     id: ConversationId,
-    conversation: Pick<IConversation, "isArchived" | "messages">
+    conversation: Pick<IConversation, "isArchived">
   ): Promise<IConversation>;
   delete(id: ConversationId): Promise<void>;
   findById(id: ConversationId): Promise<IConversation>;

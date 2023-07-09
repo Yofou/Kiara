@@ -17,7 +17,11 @@ export class JWTAdapter {
   }
 
   async signIn(email: string, password: string): Promise<LoginResponse> {
-    const user = await this.UserRepository.findByEmail(email);
+    const user = await this.UserRepository.findByEmail(
+      email as string & {
+        _brand: "UserEmail";
+      }
+    );
     if (!user) {
       throw new Error("User not found");
     }
