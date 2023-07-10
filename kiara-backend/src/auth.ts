@@ -77,8 +77,8 @@ AuthController.post("/signin", async (req, res) => {
       user.password
     );
     return res.json({ authToken, refreshToken });
-  } catch (error) {
-    return res.status(400).json(error);
+  } catch (error: any) {
+    return res.status(400).json({ error: error.message });
   }
 });
 
@@ -93,9 +93,9 @@ AuthController.post("/refresh", async (req, res) => {
       refreshToken
     );
     return res.json({ authToken, refreshToken: newRefreshToken });
-  } catch (error) {
+  } catch (error: any) {
     //console.log(error);
-    return res.status(400).json(error);
+    return res.status(400).json({ error: error.message });
   }
 });
 
@@ -111,7 +111,7 @@ AuthController.get("/me", isAuthorized, async (req, res) => {
     delete (user as any).passwordHash;
     return res.json(user);
   } catch (error: any) {
-    return res.status(400).json(error);
+    return res.status(400).json({ error: error.message });
   }
 });
 
@@ -127,7 +127,7 @@ AuthController.delete("/delete", isAuthorized, async (req, res) => {
     await UserRepository.delete(user.id);
     return res.json({ message: "User deleted" });
   } catch (error: any) {
-    return res.status(400).json(error);
+    return res.status(400).json({ error: error.message });
   }
 });
 
