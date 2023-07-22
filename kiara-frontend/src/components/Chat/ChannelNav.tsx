@@ -8,10 +8,19 @@ const NavContainer = styled("nav", {
   display: "flex",
   width: "min-content",
   ["& .kiara-channel-nav"]: {
+    fontSize: '1.42857rem',
     height: "100%",
   },
   ['& .kiara-channel-nav-header']: {
-    height: '4.57rem',
+    height: '5.428rem',
+    ['div:nth-of-type(1)']: {
+      width: '56px !important',
+      height: '56px !important',
+      ['svg']: {
+        width: '24px',
+        height: '24px'
+      }
+    },
     ['div:nth-of-type(2)']: {
       visibility: 'hidden'
     }

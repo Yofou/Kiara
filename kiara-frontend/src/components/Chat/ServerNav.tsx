@@ -1,5 +1,26 @@
+import { ICON_SIZE } from "@/utils/icons";
 import { ActionIcon, SideNav } from "@lobehub/ui";
 import { styled } from "@stitches/react";
+import { MessageCircle, Settings } from "lucide-react";
+
+const Avatar = styled("div", {
+  width: "3.5rem",
+  height: "3.5rem",
+  borderRadius: "100%",
+  background: "#6f6f6f",
+});
+
+const ActionList = styled('div', {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '.5rem'
+})
+
+export const Actions: React.FC = () => {
+  return <ActionList>
+    <ActionIcon icon={MessageCircle} size={ICON_SIZE} />
+  </ActionList>
+}
 
 const NavContainer = styled("nav", {
   display: "contents",
@@ -13,12 +34,12 @@ export const ServerNav: React.FC = () => {
     <NavContainer>
       <SideNav
         className="kiara-side-nav"
+        avatar={<Avatar />}
+        topActions={<Actions />}
         bottomActions={
           <ActionIcon
-            size={{
-              blockSize: 56,
-              borderRadius: 8,
-            }}
+            icon={Settings}
+            size={ICON_SIZE}
           />
         }
       />
