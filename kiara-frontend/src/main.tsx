@@ -5,7 +5,8 @@ import {
   RouterProvider,
 } from "react-router-dom";
 import './normalize.css'
-import { Chat } from './presentation/Chat'
+import { Chat } from '@/routes/Chat'
+import { ThemeProvider } from '@lobehub/ui';
 
 const router = createBrowserRouter([
   {
@@ -16,7 +17,9 @@ const router = createBrowserRouter([
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <ThemeProvider themeMode={'dark'}>
+      <RouterProvider router={router} />
+    </ThemeProvider>
   </React.StrictMode>
 );
 
